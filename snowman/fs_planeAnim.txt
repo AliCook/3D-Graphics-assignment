@@ -1,0 +1,91 @@
+#version 330 core
+
+/* I declare any modifcations to this code (sourced from tutorial exercises) is my own work */
+/* Author Alistair Cook - adcook1@sheffield.ac.uk */
+
+in vec3 aPos;
+in vec3 aNormal;
+in vec2 aTexCoord;
+in vec2 movingTexCoord;
+
+out vec4 fragColor;
+
+uniform sampler2D first_texture;
+uniform sampler2D second_texture;
+uniform sampler2D third_texture;
+uniform sampler2D fourth_texture;
+uniform vec3 viewPos;
+
+struct Light {
+  vec3 position;
+  vec3 ambient;
+  vec3 diffuse;
+  vec3 specular;
+  vec3 direction;
+  float cutOff;
+};
+
+struct Light2 {
+  vec3 position;
+  vec3 ambient;
+  vec3 diffuse;
+  vec3 specular;
+};
+
+uniform Light light;
+uniform Light2 light2;  
+
+struct Material {
+  vec3 ambient;
+  vec3 diffuse;
+  vec3 specular;
+  float shininess;
+}; 
+  
+uniform Material material;
+
+void main() {
+  // Mixing the ambient lighting for the world light of the animated texture
+  vec3 ambient2 = light2.ambient * vec3(mix(texture(first_texture, aTexCoord),
+                       texture(fourth_texture, movingTexCoord),0.35f).rgb);
+
+  vec3 norm = normalize(aNormal);
+
+  vec3 lightDir2 = normalize(light2.position - aPos);  
+  float diff2 = max(dot(norm, lightDir2), 0.0);
+  // Calculating the diffuse lighting for the world light
+  vec3 diffuse2 = light2.diffuse * diff2 * vec3(texture(third_texture, aTexCoord)); 
+  
+
+  vec3 viewDir = normalize(viewPos - aPos);
+   
+  
+  vec3 reflectDir2 = reflect(-lightDir2, norm);  
+  float spec2 = pow(max(dot(viewDir, reflectDir2), 0.0), material.shininess);
+  // Calculating the specular lighting for the world light
+  vec3 specular2 = light2.specular * spec2 * vec3(texture(second_texture, aTexCoord));
+  
+  vec3 result;
+  vec3 lightDir = normalize(light.position - aPos);
+  vec3 reflectDir;
+  
+  float theta = dot(lightDir, normalize(-light.direction));  
+  if(theta > light.cutOff){
+    // Calculating the ambient lighting for the spotlight of the animated texture
+    vec3 ambient = light.ambient * vec3(mix(texture(first_texture, aTexCoord),
+                       texture(fourth_texture, movingTexCoord),0.35f).rgb);
+  	//vec3 ambient = light.ambient * vec3(texture(first_texture, aTexCoord));
+  	float diff = max(dot(norm, lightDir), 0.0);
+  	// Calculating the diffuse lighting for the spotlight
+  	vec3 diffuse = light.diffuse * diff * vec3(texture(third_texture, aTexCoord));
+  	reflectDir = reflect(-lightDir, norm); 
+  	float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+  	// Calculating the specular lighting for the world light
+  	vec3 specular = light.specular * spec * vec3(texture(second_texture, aTexCoord));
+  	
+    result = (ambient + diffuse) + (ambient2 + diffuse2);
+  } else {
+    result = (ambient2 + diffuse2)*1.2;
+  }
+  fragColor = vec4(result, 1.0);
+}
